@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card-bg: #16161f;
+    --border: #2a2a3a;
+    --accent: #7c6aff;
+    --accent2: #ff6a8a;
+    --accent3: #6affd4;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --correct: #22c97a;
+    --wrong: #ff4d6d;
+    --mono: 'DM Mono', monospace;
+    --display: 'Syne', sans-serif;
+    --body: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%;
+    left: -20%;
+    width: 80%;
+    height: 80%;
+    background: radial-gradient(ellipse, rgba(124,106,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 36px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header h1 {
+    font-family: var(--display);
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 60%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 6px;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+
+  /* Progress */
+  .progress-bar {
+    width: 100%;
+    max-width: 640px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: right;
+    max-width: 640px;
+    width: 100%;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Score strip */
+  .score-strip {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 28px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .score-item { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.correct { background: var(--correct); }
+  .dot.wrong { background: var(--wrong); }
+  .dot.remaining { background: var(--border); }
+
+  /* Card */
+  .card-wrapper {
+    width: 100%;
+    max-width: 640px;
+    perspective: 1200px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    width: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    cursor: pointer;
+  }
+
+  /* Invisible spacer so wrapper height matches whichever face is taller */
+  .card-sizer {
+    visibility: hidden;
+    pointer-events: none;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .card-face.back {
+    transform: rotateY(180deg);
+    border-color: rgba(124,106,255,0.3);
+    background: linear-gradient(135deg, #16161f 0%, #1a1428 100%);
+  }
+
+  .card-tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-tag::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .card-question {
+    font-family: var(--body);
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--text);
+    font-weight: 400;
+    flex: 1;
+  }
+
+  .card-question .eq {
+    font-family: var(--mono);
+    background: rgba(124,106,255,0.12);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    margin: 14px 0;
+    border-left: 3px solid var(--accent);
+    color: var(--accent3);
+    display: block;
+  }
+
+  /* MCQ options on front */
+  .options {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .option {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.88rem;
+    color: var(--muted);
+    background: rgba(255,255,255,0.02);
+    font-family: var(--body);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: left;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .option:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(124,106,255,0.08);
+  }
+
+  .option.selected-correct {
+    border-color: var(--correct);
+    color: var(--correct);
+    background: rgba(34,201,122,0.08);
+  }
+
+  .option.selected-wrong {
+    border-color: var(--wrong);
+    color: var(--wrong);
+    background: rgba(255,77,109,0.08);
+  }
+
+  .option.reveal-correct {
+    border-color: var(--correct);
+    color: var(--correct);
+    background: rgba(34,201,122,0.06);
+  }
+
+  .option-letter {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    min-width: 18px;
+    padding-top: 1px;
+    opacity: 0.6;
+  }
+
+  .hint-flip {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  /* Answer side */
+  .answer-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--accent3);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .answer-main {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--correct);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .answer-explanation {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #b0b0c8;
+    flex: 1;
+  }
+
+  .answer-explanation .point {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+
+  .answer-explanation .bullet {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    margin-top: 2px;
+    min-width: 12px;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 640px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn.primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #5a4fcf 100%);
+    border-color: transparent;
+    color: #fff;
+  }
+
+  .btn.primary:hover { opacity: 0.9; color: #fff; }
+
+  .btn:disabled { opacity: 0.3; cursor: default; }
+  .btn:disabled:hover { border-color: var(--border); color: var(--text); }
+
+  /* Mode selector */
+  .mode-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 5px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .mode-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .mode-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Result screen */
+  .result-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 640px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .result-screen.show { display: flex; }
+
+  .result-big {
+    font-family: var(--display);
+    font-size: 5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .result-label {
+    font-family: var(--mono);
+    color: var(--muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+  }
+
+  .result-breakdown {
+    display: flex;
+    gap: 24px;
+    margin: 8px 0;
+  }
+
+  .rb-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .rb-num {
+    font-family: var(--display);
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .rb-num.c { color: var(--correct); }
+  .rb-num.w { color: var(--wrong); }
+
+  .rb-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .main-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  @media (max-width: 500px) {
+    .card-face { padding: 24px 20px; }
+    .card-question { font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SECURITY FLASHCARDS</h1>
+  <p>COMP 3000 · Exam Prep · 20 Questions</p>
+</div>
+
+<div class="mode-bar">
+  <button class="mode-btn active" onclick="setMode('study')">STUDY</button>
+  <button class="mode-btn" onclick="setMode('quiz')">QUIZ</button>
+  <button class="mode-btn" onclick="setMode('shuffle')">SHUFFLE</button>
+</div>
+
+<div class="main-area" id="mainArea">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+
+  <div class="score-strip">
+    <div class="score-item"><div class="dot correct"></div><span id="scoreCorrect">0 correct</span></div>
+    <div class="score-item"><div class="dot wrong"></div><span id="scoreWrong">0 wrong</span></div>
+    <div class="score-item"><div class="dot remaining"></div><span id="scoreLeft">20 left</span></div>
+  </div>
+
+  <div class="card-wrapper">
+    <div class="card" id="flashcard" onclick="handleCardClick(event)">
+      <div class="card-sizer" id="cardSizer"></div>
+      <div class="card-face front" id="cardFront"></div>
+      <div class="card-face back" id="cardBack"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btnPrev" onclick="navigate(-1)">← PREV</button>
+    <button class="btn primary" id="btnFlip" onclick="flipCard()">FLIP</button>
+    <button class="btn" id="btnNext" onclick="navigate(1)">NEXT →</button>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <div class="result-big" id="resultPct"></div>
+    <div class="result-label">QUIZ COMPLETE</div>
+    <div class="result-breakdown">
+      <div class="rb-item"><div class="rb-num c" id="resCorrect">0</div><div class="rb-label">correct</div></div>
+      <div class="rb-item"><div class="rb-num w" id="resWrong">0</div><div class="rb-label">wrong</div></div>
+    </div>
+    <button class="btn primary" style="max-width:200px" onclick="restart()">RESTART</button>
+  </div>
+</div>
+
+<script>
+const cards = [
+  {
+    id: 1,
+    question: "Programs with <strong>setuid</strong> are of special interest to attackers because they:",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "are more likely to have software vulnerabilities due to the setuid being set to 1" },
+      { letter: "B", text: "will allow other users to escalate their privilege temporarily" },
+      { letter: "C", text: "usually run as root" },
+      { letter: "D", text: "are visible from outside the network" }
+    ],
+    answer: "C",
+    explanation: "Setuid programs run with the file owner's privileges (often root), so exploiting them grants attackers elevated access without needing to know the root password."
+  },
+  {
+    id: 2,
+    question: `Given: <span class="eq">AP = TP / (TP + FP) ≈ TP / FP ≈ nI / (FPR · nN) ≈ (nI / nN) / FPR</span>
+    <strong>(a)</strong> What is a desirable property for AP?<br><br>
+    <strong>(b)</strong> What two factors affect AP?<br><br>
+    <strong>(c)</strong> Which factor is within designers' control and which is external?`,
+    type: "written",
+    answer: "(a) High (close to 1)\n(b) FPR and (nI / nN)\n(c) FPR = designer's control; (nI / nN) = external (depends on actual intrusion rate)",
+    explanation: "AP (alarm precision) should be high so alarms are meaningful. FPR can be tuned by the designer. The ratio of intrusions to normal events is an external real-world property."
+  },
+  {
+    id: 4,
+    question: "An organization with <strong>max-security requirements</strong> that cannot tolerate any intrusions would do what to the anomaly-based N1 profile, and what is the negative consequence?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Retrain until N1 is zero → increased false positives" },
+      { letter: "B", text: "Increase R's size → reduced false positives" },
+      { letter: "C", text: "Retrain until N1 does not intersect with R → increased false positives" },
+      { letter: "D", text: "Retrain to increase N1 size → reduced false negatives" }
+    ],
+    answer: "C",
+    explanation: "To catch all intrusions, they tighten the boundary so the normal region R doesn't overlap the intrusion zone N1. The cost is many legitimate events flagged as suspicious (high false positive rate)."
+  },
+  {
+    id: 5,
+    question: "What is the advantage of the attacker in <strong>case (b)</strong> (encrypted virus) compared to <strong>case (a)</strong>?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Faster deployment and propagation" },
+      { letter: "B", text: "Having a strong key" },
+      { letter: "C", text: "The body is encrypted" },
+      { letter: "D", text: "Creating a signature for the decryptor is challenging" }
+    ],
+    answer: "D",
+    explanation: "Even though encryption hides the body, the decryptor stub is constant and detectable by signature. The real advantage is that the decryptor can be mutated, making signature creation difficult."
+  },
+  {
+    id: 6,
+    question: "In case (b), how would the <strong>decryptor evolve</strong>? <em>(Select TWO correct methods)</em>",
+    type: "multi",
+    options: [
+      { letter: "A", text: "Executing a remote exploit on a network service to obtain a root shell" },
+      { letter: "B", text: "Get encryption from a nearby vulnerable server via hidden authenticated message" },
+      { letter: "C", text: "Select a decryptor for each new infection from a fixed pool of decryptors in the body" },
+      { letter: "D", text: "Virus rewrites its own code, mutating both body and mutation engine itself" },
+      { letter: "E", text: "Using a mini-compiler that creates a new decryptor" }
+    ],
+    answer: ["C", "D"],
+    explanation: "Two evolution strategies: (C) selecting from a fixed pool of variants (oligomorphic), and (D) fully rewriting both the body and mutation engine (metamorphic)."
+  },
+  {
+    id: 7,
+    question: "What is the name of the second encryption strategy <strong>(b)</strong> — where the virus uses multiple decryptors?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Rootkit" },
+      { letter: "B", text: "Polymorphic" },
+      { letter: "C", text: "Autorooter" },
+      { letter: "D", text: "Fixed encryption" },
+      { letter: "E", text: "Stealthy" },
+      { letter: "F", text: "Metamorphic" }
+    ],
+    answer: "B",
+    explanation: "A polymorphic virus changes its decryptor code with each infection (while the encrypted body remains functionally the same), making static signature detection difficult."
+  },
+  {
+    id: 8,
+    question: "How would strategy (b) — a <strong>polymorphic virus</strong> — be detected?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Cannot be detected because of the strong encryption" },
+      { letter: "B", text: "Capturing the key on-the-fly" },
+      { letter: "C", text: "Detecting the damage but not the actual code" },
+      { letter: "D", text: "Pre-run executables in emulators to detect the unencrypted body" }
+    ],
+    answer: "D",
+    explanation: "Emulation/sandbox execution forces the decryptor to run and decrypt the body, revealing the actual payload for signature matching — bypassing the encryption entirely."
+  },
+  {
+    id: 9,
+    question: "In the Intrusion Detection diagram, what is the label for <strong>area A</strong> (grey shaded area)?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "True positives" },
+      { letter: "B", text: "True negatives" },
+      { letter: "C", text: "False positives" },
+      { letter: "D", text: "False negatives" }
+    ],
+    answer: "A",
+    explanation: "Area A (grey) = True Positives — actual intrusions that were correctly detected and flagged by the IDS."
+  },
+  {
+    id: 10,
+    question: "In the Intrusion Detection diagram, what is the label for <strong>area B</strong> (blue shaded area)?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "False negatives" },
+      { letter: "B", text: "True negatives" },
+      { letter: "C", text: "True positives" },
+      { letter: "D", text: "False positives" }
+    ],
+    answer: "A",
+    explanation: "Area B (blue) = False Negatives — actual intrusions that were NOT flagged by the IDS (missed detections)."
+  },
+  {
+    id: 11,
+    question: "What kind of organization would pick threshold <strong>t at point C</strong>, and what would be the impact?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "A max-security org that does not tolerate any intrusions" },
+      { letter: "B", text: "A customer service company that wants to admit all legitimate users" },
+      { letter: "C", text: "A customer service company that doesn't want to upset customers" },
+      { letter: "D", text: "A max-security org that doesn't want to upset employees" }
+    ],
+    answer: "A",
+    explanation: "Point C is a strict (low) threshold — catches all intrusions but generates many false positives. A max-security org accepts this cost to miss zero attacks."
+  },
+  {
+    id: 12,
+    question: "What kind of organization would pick threshold <strong>t at point D</strong>, and what would be the impact?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "A customer service company that does not want to upset its customers" },
+      { letter: "B", text: "A max-security org that does not tolerate any intrusions" },
+      { letter: "C", text: "A customer service company that does not tolerate any intrusions" },
+      { letter: "D", text: "A max-security org that wants to minimize false negatives" }
+    ],
+    answer: "A",
+    explanation: "Point D is a lenient (high) threshold — minimizes false alarms so legitimate users aren't rejected. Suitable for customer-facing services that prioritize user experience."
+  },
+  {
+    id: 13,
+    question: "For a process seeking <strong>r (read) access</strong> to a file, where the process is the file owner — what must be true to grant the request?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Permission has to be -rwxr--r--" },
+      { letter: "B", text: "User has to grant r and the rest does not matter" },
+      { letter: "C", text: "Others have to grant r" },
+      { letter: "D", text: "User permission can be anything if group grants r" }
+    ],
+    answer: "B",
+    explanation: "Unix checks the OWNER bits first. If you are the owner, only the user permission bits are checked — group and other bits are irrelevant. The owner bit must include 'r'."
+  },
+  {
+    id: 14,
+    question: "To access <code>/etc/shadow</code>, root access is required. What is the <strong>best approach</strong>?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Make temporary privilege escalation an option for certain tasks (e.g. sudo)" },
+      { letter: "B", text: "Login as regular user but make /etc/shadow accessible by all users" },
+      { letter: "C", text: "Login as root all the time to access any file" },
+      { letter: "D", text: "Give all users root privileges" }
+    ],
+    answer: "A",
+    explanation: "Principle of least privilege: use sudo or setuid to grant temporary elevated access only when needed. Logging in as root permanently is a major security risk."
+  },
+  {
+    id: 15,
+    question: "If default regular file permission is <code>777</code> and the <strong>umask is 033</strong>, what is the resulting permission?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "-rwxrwxrwx (777)" },
+      { letter: "B", text: "-r-xr-xr-x (555)" },
+      { letter: "C", text: "---rwxrwx (077)" },
+      { letter: "D", text: "-rwxr--r-- (744)" }
+    ],
+    answer: "D",
+    explanation: "Permission = default AND NOT(umask). 777 AND NOT(033) = 777 AND 744 = 744 = -rwxr--r--. The umask masks off the write bits for group and others."
+  },
+  {
+    id: 17,
+    question: "In the ransomware diagram, what is <strong>k</strong>?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Random key used for AES encryption only" },
+      { letter: "B", text: "Key used for symmetric encryption and also treated as data when it is encrypted" },
+      { letter: "C", text: "Data input to RSA that is also a key to public key encryption" },
+      { letter: "D", text: "Data input to RSA only" },
+      { letter: "E", text: "Random key used for asymmetric encryption and also treated as data when encrypted" }
+    ],
+    answer: "B",
+    explanation: "k is the symmetric (AES) session key used to encrypt victim files. It is then itself encrypted with the attacker's RSA public key — so k is both a key (for AES) and data (input to RSA)."
+  },
+  {
+    id: 18,
+    question: "In the ransomware diagram, <strong>how many k keys</strong> are used for each victim?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "2" },
+      { letter: "B", text: "2000" },
+      { letter: "C", text: "n (one per file)" },
+      { letter: "D", text: "m" },
+      { letter: "E", text: "i" },
+      { letter: "F", text: "1" }
+    ],
+    answer: "C",
+    explanation: "A unique key k is generated for each of the n files encrypted. This ensures that decrypting one file doesn't help decrypt others — maximizing ransom leverage."
+  },
+  {
+    id: 19,
+    question: "What is a good defence against the <strong>syscall table hooking</strong> technique?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Memory scans of the kernel space" },
+      { letter: "B", text: "Anti-hooking software" },
+      { letter: "C", text: "Cross-check of table addresses" },
+      { letter: "D", text: "Memory scans of the user space" }
+    ],
+    answer: "C",
+    explanation: "By comparing the syscall table entries against a known-good copy or checking that addresses point within the legitimate kernel module, modifications (hooks) can be detected."
+  },
+  {
+    id: 20,
+    question: `Consider a <strong>different interception technique</strong> (not syscall table hooking).<br><br>
+    <strong>(1)</strong> Why wouldn't the defence against typical hooking work in this case?<br><br>
+    <strong>(2)</strong> What defence would work?`,
+    type: "written",
+    answer: "(1) This technique does NOT modify the syscall table — it injects directly into the execution path (e.g. DKOM or inline code patching), so cross-checking table addresses won't reveal the compromise.\n(2) Use Control Flow Integrity (CFI) checking to verify that execution follows legitimate code paths.",
+    explanation: "Rootkits that bypass the syscall table require deeper analysis. CFI and integrity checking of kernel code regions can catch in-memory code patches or DKOM-style manipulation."
+  },
+  {
+    id: 21,
+    question: "Which of the listed program viruses will make <strong>cleaning and recovery difficult or impossible</strong> for users?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "All of them" },
+      { letter: "B", text: "a, b, c" },
+      { letter: "C", text: "c, d" },
+      { letter: "D", text: "Only d" }
+    ],
+    answer: "C",
+    explanation: "Viruses that overwrite or deeply integrate themselves into host files (c, d) make clean removal very difficult because the original code cannot be recovered intact."
+  },
+  {
+    id: 22,
+    question: "What is an advantage of <strong>local scanning</strong> for worm propagation?",
+    type: "mcq",
+    options: [
+      { letter: "A", text: "It requires less coding" },
+      { letter: "B", text: "It results in faster code execution" },
+      { letter: "C", text: "It is risky for the worm to cross network boundaries" },
+      { letter: "D", text: "It gives access to local email addresses" }
+    ],
+    answer: "D",
+    explanation: "Local scanning finds nearby hosts and also gains access to local resources like email address books, enabling the worm to spread via trusted contacts for social engineering attacks."
+  },
+  {
+    id: 23,
+    question: `What malware uses this structure?<br><br><code style="background:rgba(124,106,255,0.12);padding:10px 14px;border-radius:8px;display:block;margin-top:12px;font-size:0.9rem;color:#6affd4">if trigger_condition.true() then run_payload()</code>`,
+    type: "mcq",
+    options: [
+      { letter: "A", text: "Trojan horse" },
+      { letter: "B", text: "Auto-rooter" },
+      { letter: "C", text: "Logic bomb" },
+      { letter: "D", text: "Rootkit" }
+    ],
+    answer: "C",
+    explanation: "A logic bomb sits dormant until a specific condition is met (a date, a login event, file deletion, etc.) and then triggers its payload. It's defined by its conditional activation."
+  }
+];
+
+let mode = 'study';
+let order = cards.map((_, i) => i);
+let current = 0;
+let isFlipped = false;
+let answered = {}; // index → true/false
+let quizDone = false;
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  if (m === 'shuffle') {
+    order = [...Array(cards.length).keys()].sort(() => Math.random() - 0.5);
+  } else {
+    order = cards.map((_, i) => i);
+  }
+  answered = {};
+  current = 0;
+  isFlipped = false;
+  quizDone = false;
+  document.getElementById('resultScreen').classList.remove('show');
+  document.querySelector('.card-wrapper').style.display = '';
+  document.querySelector('.controls').style.display = '';
+  document.querySelector('.score-strip').style.display = '';
+  document.querySelector('.progress-bar').style.display = '';
+  document.querySelector('.progress-label').style.display = '';
+  renderCard();
+  updateUI();
+}
+
+function renderCard() {
+  const card = cards[order[current]];
+  const front = document.getElementById('cardFront');
+  const back = document.getElementById('cardBack');
+  
+  // Reset flip
+  document.getElementById('flashcard').classList.remove('flipped');
+  isFlipped = false;
+
+  // Build front
+  let optionsHTML = '';
+  if (card.type === 'mcq') {
+    const alreadyAnswered = answered[current];
+    optionsHTML = `<div class="options">` + card.options.map(o => {
+      let cls = 'option';
+      if (alreadyAnswered !== undefined) {
+        if (o.letter === card.answer) cls += ' reveal-correct';
+        if (o.letter === alreadyAnswered && alreadyAnswered !== card.answer) cls += ' selected-wrong';
+      }
+      return `<button class="${cls}" onclick="selectOption(event, '${o.letter}')" data-letter="${o.letter}">
+        <span class="option-letter">${o.letter}</span>
+        <span>${o.text}</span>
+      </button>`;
+    }).join('') + `</div>`;
+  } else if (card.type === 'multi') {
+    const alreadyAnswered = answered[current];
+    optionsHTML = `<div class="options">` + card.options.map(o => {
+      let cls = 'option';
+      if (alreadyAnswered) {
+        if (card.answer.includes(o.letter)) cls += ' reveal-correct';
+      }
+      return `<button class="${cls}" onclick="selectMulti(event, '${o.letter}')" data-letter="${o.letter}">
+        <span class="option-letter">${o.letter}</span>
+        <span>${o.text}</span>
+      </button>`;
+    }).join('') + `</div>`;
+  }
+
+  const hintText = (card.type === 'written') ? '↑ click card to see answer' : '↑ flip for explanation';
+
+  const frontHTML = `
+    <div class="card-tag">Q${card.id} · ${card.type === 'written' ? 'SHORT ANSWER' : card.type === 'multi' ? 'MULTI-SELECT' : 'MULTIPLE CHOICE'}</div>
+    <div class="card-question">${card.question}</div>
+    ${optionsHTML}
+    <div class="hint-flip">${hintText}</div>
+  `;
+
+  front.innerHTML = frontHTML;
+
+  // Build back
+  let answerDisplay = '';
+  if (card.type === 'mcq') {
+    const opt = card.options.find(o => o.letter === card.answer);
+    answerDisplay = `<div class="answer-main">${card.answer}: ${opt ? opt.text : ''}</div>`;
+  } else if (card.type === 'multi') {
+    answerDisplay = `<div class="answer-main">${card.answer.join(' + ')}</div>`;
+  } else {
+    const points = card.answer.split('\n').filter(Boolean);
+    answerDisplay = points.map(p => `<div class="answer-main" style="font-size:1rem;margin-bottom:8px">${p}</div>`).join('');
+  }
+
+  const backHTML = `
+    <div class="answer-label">✓ ANSWER</div>
+    ${answerDisplay}
+    <div class="answer-explanation">
+      <div class="point"><span class="bullet">→</span><span>${card.explanation}</span></div>
+    </div>
+  `;
+
+  back.innerHTML = backHTML;
+
+  // Sync sizer to the taller of front/back so wrapper never clips
+  const sizer = document.getElementById('cardSizer');
+  sizer.innerHTML = frontHTML; // start with front content
+  requestAnimationFrame(() => {
+    const frontH = front.scrollHeight;
+    const backH = back.scrollHeight;
+    sizer.style.minHeight = Math.max(frontH, backH, 280) + 'px';
+  });
+}
+
+function handleCardClick(e) {
+  if (e.target.closest('.option')) return;
+  flipCard();
+}
+
+function flipCard() {
+  const card = document.getElementById('flashcard');
+  isFlipped = !isFlipped;
+  card.classList.toggle('flipped', isFlipped);
+  document.getElementById('btnFlip').textContent = isFlipped ? 'UNFLIP' : 'FLIP';
+}
+
+function selectOption(e, letter) {
+  e.stopPropagation();
+  if (answered[current] !== undefined) return;
+  
+  const card = cards[order[current]];
+  const correct = letter === card.answer;
+  answered[current] = letter;
+  
+  // Re-render to show state
+  renderCard();
+  updateUI();
+
+  // Auto-flip after short delay in quiz mode
+  if (mode === 'quiz') {
+    setTimeout(() => {
+      if (!isFlipped) flipCard();
+    }, 600);
+  }
+}
+
+let multiSelected = [];
+function selectMulti(e, letter) {
+  e.stopPropagation();
+  const card = cards[order[current]];
+  if (answered[current]) return;
+  
+  const btn = e.currentTarget;
+  if (multiSelected.includes(letter)) {
+    multiSelected = multiSelected.filter(l => l !== letter);
+    btn.style.borderColor = '';
+    btn.style.color = '';
+  } else {
+    multiSelected.push(letter);
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = 'var(--accent)';
+  }
+  
+  if (multiSelected.length === 2) {
+    const correct = card.answer.every(a => multiSelected.includes(a)) && multiSelected.every(a => card.answer.includes(a));
+    answered[current] = correct;
+    multiSelected = [];
+    renderCard();
+    updateUI();
+    if (mode === 'quiz') setTimeout(() => { if (!isFlipped) flipCard(); }, 600);
+  }
+}
+
+function navigate(dir) {
+  const newIdx = current + dir;
+  if (newIdx < 0 || newIdx >= cards.length) return;
+  current = newIdx;
+  multiSelected = [];
+  renderCard();
+  updateUI();
+}
+
+function updateUI() {
+  const total = cards.length;
+  const done = Object.keys(answered).length;
+  const correct = Object.values(answered).filter(v => v === true || (typeof v === 'string' && v === cards[order[Object.keys(answered).find(k => answered[k] === v)]].answer)).length;
+  
+  // Count correct properly
+  let cCount = 0, wCount = 0;
+  for (const [idx, ans] of Object.entries(answered)) {
+    const card = cards[order[idx]];
+    if (card.type === 'multi') {
+      if (ans === true) cCount++; else wCount++;
+    } else if (card.type === 'written') {
+      // written: skip scoring
+    } else {
+      if (ans === card.answer) cCount++; else wCount++;
+    }
+  }
+
+  document.getElementById('progressFill').style.width = `${(done/total)*100}%`;
+  document.getElementById('progressLabel').textContent = `${done} / ${total} answered`;
+  document.getElementById('scoreCorrect').textContent = `${cCount} correct`;
+  document.getElementById('scoreWrong').textContent = `${wCount} wrong`;
+  document.getElementById('scoreLeft').textContent = `${total - done} left`;
+
+  document.getElementById('btnPrev').disabled = current === 0;
+  document.getElementById('btnNext').disabled = current === total - 1;
+  document.getElementById('btnFlip').textContent = isFlipped ? 'UNFLIP' : 'FLIP';
+
+  // Check if quiz done
+  if (mode === 'quiz' && done === total && !quizDone) {
+    quizDone = true;
+    setTimeout(showResult, 800);
+  }
+}
+
+function showResult() {
+  let cCount = 0, wCount = 0;
+  for (const [idx, ans] of Object.entries(answered)) {
+    const card = cards[order[idx]];
+    if (card.type === 'multi') {
+      if (ans === true) cCount++; else wCount++;
+    } else if (card.type !== 'written') {
+      if (ans === card.answer) cCount++; else wCount++;
+    }
+  }
+  const scorable = cards.filter(c => c.type !== 'written').length;
+  const pct = Math.round((cCount / scorable) * 100);
+  
+  document.getElementById('resultPct').textContent = `${pct}%`;
+  document.getElementById('resCorrect').textContent = cCount;
+  document.getElementById('resWrong').textContent = wCount;
+  
+  document.querySelector('.card-wrapper').style.display = 'none';
+  document.querySelector('.controls').style.display = 'none';
+  document.getElementById('resultScreen').classList.add('show');
+}
+
+function restart() {
+  answered = {};
+  current = 0;
+  isFlipped = false;
+  quizDone = false;
+  if (mode === 'shuffle') order = [...Array(cards.length).keys()].sort(() => Math.random() - 0.5);
+  document.getElementById('resultScreen').classList.remove('show');
+  document.querySelector('.card-wrapper').style.display = '';
+  document.querySelector('.controls').style.display = '';
+  renderCard();
+  updateUI();
+}
+
+// Init
+renderCard();
+updateUI();
+</script>
+</body>
+</html>
