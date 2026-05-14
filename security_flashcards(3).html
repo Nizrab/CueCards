@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f; --surface:#111118; --card-bg:#16161f; --border:#2a2a3a;
+    --accent:#7c6aff; --accent2:#ff6a8a; --accent3:#6affd4;
+    --text:#e8e8f0; --muted:#6b6b80; --correct:#22c97a; --wrong:#ff4d6d;
+    --mono:'DM Mono',monospace; --display:'Syne',sans-serif; --body:'DM Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;overflow-x:hidden;}
+  body::before{content:'';position:fixed;top:-40%;left:-20%;width:80%;height:80%;
+    background:radial-gradient(ellipse,rgba(124,106,255,0.07) 0%,transparent 70%);
+    pointer-events:none;z-index:0;}
+
+  .header{text-align:center;margin-bottom:28px;position:relative;z-index:1;}
+  .header h1{font-family:var(--display);font-size:clamp(1.6rem,5vw,2.6rem);font-weight:800;
+    letter-spacing:-0.02em;background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 60%,var(--accent3) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .header p{color:var(--muted);font-size:0.85rem;margin-top:6px;font-family:var(--mono);letter-spacing:0.05em;}
+
+  .mode-bar{display:flex;gap:6px;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:5px;position:relative;z-index:1;}
+  .mode-btn{padding:8px 20px;border-radius:8px;border:none;background:transparent;color:var(--muted);
+    font-family:var(--mono);font-size:0.75rem;letter-spacing:0.06em;cursor:pointer;transition:all 0.18s;}
+  .mode-btn.active{background:var(--accent);color:#fff;}
+
+  .progress-bar{width:100%;max-width:700px;height:3px;background:var(--border);border-radius:99px;
+    margin-bottom:8px;position:relative;z-index:1;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));
+    border-radius:99px;transition:width 0.4s ease;}
+  .progress-label{font-family:var(--mono);font-size:0.72rem;color:var(--muted);text-align:right;
+    max-width:700px;width:100%;margin-bottom:16px;position:relative;z-index:1;}
+
+  .score-strip{display:flex;gap:20px;margin-bottom:20px;font-family:var(--mono);font-size:0.78rem;
+    position:relative;z-index:1;}
+  .score-item{display:flex;gap:6px;align-items:center;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot.correct{background:var(--correct);} .dot.wrong{background:var(--wrong);} .dot.remaining{background:var(--border);}
+
+  /* Card */
+  .card-wrapper{width:100%;max-width:700px;perspective:1200px;position:relative;z-index:1;margin-bottom:24px;}
+  .card{width:100%;position:relative;transform-style:preserve-3d;
+    transition:transform 0.55s cubic-bezier(0.45,0.05,0.55,0.95);cursor:pointer;}
+  .card.flipped{transform:rotateY(180deg);}
+
+  .card-sizer{visibility:hidden;pointer-events:none;padding:30px 34px;
+    border:1px solid transparent;border-radius:20px;width:100%;min-height:280px;}
+
+  .card-face{position:absolute;top:0;left:0;right:0;min-height:100%;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    background:var(--card-bg);border:1px solid var(--border);
+    border-radius:20px;padding:30px 34px;display:flex;flex-direction:column;}
+  .card-face.back{transform:rotateY(180deg);border-color:rgba(124,106,255,0.35);
+    background:linear-gradient(135deg,#16161f 0%,#1b1430 100%);}
+
+  .card-tag{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+  .card-tag::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .card-question{font-size:0.98rem;line-height:1.72;color:var(--text);font-weight:400;margin-bottom:16px;}
+  .card-question .eq{font-family:var(--mono);background:rgba(124,106,255,0.12);padding:10px 14px;
+    border-radius:10px;font-size:0.78rem;line-height:1.7;margin:12px 0;border-left:3px solid var(--accent);
+    color:var(--accent3);display:block;word-break:break-all;}
+  .card-question code{font-family:var(--mono);background:rgba(255,255,255,0.07);padding:2px 7px;
+    border-radius:5px;font-size:0.88em;color:var(--accent3);}
+
+  .options{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;}
+  .option{padding:10px 15px;border:1px solid var(--border);border-radius:10px;font-size:0.865rem;
+    color:var(--muted);background:rgba(255,255,255,0.02);cursor:pointer;transition:all 0.15s ease;
+    text-align:left;display:flex;gap:10px;align-items:flex-start;line-height:1.5;font-family:var(--body);}
+  .option:hover{border-color:var(--accent);color:var(--text);background:rgba(124,106,255,0.08);}
+  .option.selected-correct{border-color:var(--correct);color:var(--correct);background:rgba(34,201,122,0.09);}
+  .option.selected-wrong{border-color:var(--wrong);color:var(--wrong);background:rgba(255,77,109,0.09);}
+  .option.reveal-correct{border-color:var(--correct);color:var(--correct);background:rgba(34,201,122,0.06);}
+  .option.multi-pending{border-color:var(--accent);color:var(--accent);background:rgba(124,106,255,0.1);}
+  .option-letter{font-family:var(--mono);font-size:0.7rem;font-weight:500;min-width:18px;
+    padding-top:2px;opacity:0.5;flex-shrink:0;}
+
+  .hint-flip{margin-top:auto;padding-top:12px;font-family:var(--mono);font-size:0.7rem;
+    color:var(--muted);text-align:center;opacity:0.4;}
+
+  /* Back face */
+  .answer-label{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.12em;color:var(--accent3);
+    text-transform:uppercase;margin-bottom:12px;}
+  .answer-main-big{font-family:var(--display);font-size:1.4rem;font-weight:700;color:var(--correct);
+    margin-bottom:10px;letter-spacing:-0.01em;line-height:1.35;}
+  .answer-line{font-size:0.89rem;line-height:1.68;color:#c0c0dc;margin-bottom:8px;padding-left:2px;}
+  .answer-explanation{font-size:0.86rem;line-height:1.65;color:#9090b8;margin-top:12px;padding-top:12px;
+    border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;}
+  .answer-explanation .bullet{color:var(--accent);font-family:var(--mono);font-size:0.8rem;margin-top:3px;flex-shrink:0;}
+
+  /* Controls */
+  .controls{display:flex;gap:10px;width:100%;max-width:700px;position:relative;z-index:1;}
+  .btn{flex:1;padding:13px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);
+    color:var(--text);font-family:var(--mono);font-size:0.8rem;letter-spacing:0.05em;cursor:pointer;
+    transition:all 0.16s ease;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn:active{transform:scale(0.97);}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),#5a4fcf);border-color:transparent;color:#fff;}
+  .btn.primary:hover{opacity:0.88;color:#fff;}
+  .btn:disabled{opacity:0.25;cursor:default;pointer-events:none;}
+
+  /* Result */
+  .result-screen{display:none;flex-direction:column;align-items:center;text-align:center;gap:14px;
+    width:100%;max-width:700px;background:var(--card-bg);border:1px solid var(--border);
+    border-radius:20px;padding:48px 24px;position:relative;z-index:1;}
+  .result-screen.show{display:flex;}
+  .result-big{font-family:var(--display);font-size:5.5rem;font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+  .result-label{font-family:var(--mono);color:var(--muted);font-size:0.82rem;letter-spacing:0.1em;}
+  .result-breakdown{display:flex;gap:36px;margin:8px 0;}
+  .rb-item{display:flex;flex-direction:column;gap:4px;align-items:center;}
+  .rb-num{font-family:var(--display);font-size:2.4rem;font-weight:700;}
+  .rb-num.c{color:var(--correct);} .rb-num.w{color:var(--wrong);}
+  .rb-label{font-family:var(--mono);font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;}
+
+  .main-area{display:flex;flex-direction:column;align-items:center;width:100%;}
+
+  @media(max-width:520px){
+    .card-face,.card-sizer{padding:22px 18px;}
+    .card-question{font-size:0.9rem;}
+    .option{font-size:0.82rem;padding:9px 11px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SECURITY FLASHCARDS</h1>
+  <p>COMP 3000 · Exam Prep · 24 Questions</p>
+</div>
+
+<div class="mode-bar">
+  <button class="mode-btn active" onclick="setMode('study',event)">STUDY</button>
+  <button class="mode-btn"       onclick="setMode('quiz',event)">QUIZ</button>
+  <button class="mode-btn"       onclick="setMode('shuffle',event)">SHUFFLE</button>
+</div>
+
+<div class="main-area">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+  <div class="score-strip">
+    <div class="score-item"><div class="dot correct"></div><span id="scoreCorrect">0 correct</span></div>
+    <div class="score-item"><div class="dot wrong"></div><span id="scoreWrong">0 wrong</span></div>
+    <div class="score-item"><div class="dot remaining"></div><span id="scoreLeft">24 left</span></div>
+  </div>
+
+  <div class="card-wrapper" id="cardWrapper">
+    <div class="card" id="flashcard" onclick="handleCardClick(event)">
+      <div class="card-sizer" id="cardSizer"></div>
+      <div class="card-face front" id="cardFront"></div>
+      <div class="card-face back"  id="cardBack"></div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls">
+    <button class="btn" id="btnPrev" onclick="navigate(-1)">← PREV</button>
+    <button class="btn primary" id="btnFlip" onclick="flipCard()">FLIP</button>
+    <button class="btn" id="btnNext" onclick="navigate(1)">NEXT →</button>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <div class="result-big" id="resultPct"></div>
+    <div class="result-label">QUIZ COMPLETE</div>
+    <div class="result-breakdown">
+      <div class="rb-item"><div class="rb-num c" id="resCorrect">0</div><div class="rb-label">correct</div></div>
+      <div class="rb-item"><div class="rb-num w" id="resWrong">0</div><div class="rb-label">wrong</div></div>
+    </div>
+    <button class="btn primary" style="max-width:200px;flex:unset" onclick="restart()">TRY AGAIN</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  ALL ANSWERS VERIFIED AGAINST PROVIDED ANSWER-KEY IMAGES
+//  Corrections from images noted inline
+// ═══════════════════════════════════════════════════════════════════════
+const cards = [
+
+  // ── SET 1: File Permissions & Privilege ─────────────────────────────
+
+  // Image1-Q1: Answer B  (original text said C — IMAGE CORRECTS TO B)
+  { id:"P1", type:"mcq",
+    question:"Programs with <strong>setuid</strong> are of special interest to attackers because they:",
+    options:[
+      {l:"A",t:"are more likely to have software vulnerabilities due to the setuid being set to 1"},
+      {l:"B",t:"will allow other users to escalate their privilege temporarily"},
+      {l:"C",t:"usually run as root"},
+      {l:"D",t:"are visible from outside the network"}
+    ],
+    answer:"B",
+    explanation:"Setuid programs run with the <em>file owner's</em> privileges. An attacker who exploits one can temporarily escalate to those privileges (often root) without knowing the root password. ✔ Confirmed by image answer key."
+  },
+
+  // Image1-Q2: Answer B  (matches original Q13)
+  { id:"P2", type:"mcq",
+    question:"For a process that seeks <strong>r (read)</strong> access to a file and is the <strong>file owner</strong>, to grant the request:",
+    options:[
+      {l:"A",t:"permission has to be -rwxr--r--"},
+      {l:"B",t:"user has to grant r and the rest does not matter"},
+      {l:"C",t:"user permission can be anything if group grants r"},
+      {l:"D",t:"others have to grant r"}
+    ],
+    answer:"B",
+    explanation:"Unix checks permission categories in order: owner first. If the process is the owner, only the <em>user</em> bits matter — group and other bits are ignored entirely."
+  },
+
+  // Image1-Q3: Answer C  (original Q14 answer was A — options re-ordered in image, C = 'temporary privilege escalation')
+  { id:"P3", type:"mcq",
+    question:"To access <code>/etc/shadow</code>, root access is required. What is the <strong>best approach</strong> of the following?",
+    options:[
+      {l:"A",t:"to login as root all the time to be able to access any file you want and do any task you want"},
+      {l:"B",t:"to login as regular user but make most files, including /etc/shadow, accessible by all users"},
+      {l:"C",t:"to make temporary privilege escalation an option for users to perform certain tasks"},
+      {l:"D",t:"to give all users root privileges"}
+    ],
+    answer:"C",
+    explanation:"Principle of Least Privilege: use <code>sudo</code>/setuid to grant elevated access only when needed, only for specific tasks. Staying logged in as root permanently massively widens the attack surface."
+  },
+
+  // Image2-Q4: Answer D  (matches original Q15)
+  { id:"P4", type:"mcq",
+    question:"If default regular files permission is <code>777</code> and the <strong>umask is 033</strong>, the permission for this user is:",
+    options:[
+      {l:"A",t:"-rwxrwxrwx  (777)"},
+      {l:"B",t:"-r-xr-xr-x  (555)"},
+      {l:"C",t:"----rwxrwx  (077)"},
+      {l:"D",t:"-rwxr--r--  (744)"}
+    ],
+    answer:"D",
+    explanation:"permission = default AND NOT(umask). NOT(033) = 744. 777 AND 744 = <strong>744 = -rwxr--r--</strong>. The umask strips write bits from group and other."
+  },
+
+  // ── SET 2: Intrusion Detection Diagram ──────────────────────────────
+
+  // Image3-Q1: Answer C = False negatives  (original said A=True positives — IMAGE CORRECTS TO C)
+  { id:"D1", type:"mcq",
+    question:`<em>Refer to the Intrusion Detection diagram (probability density functions for imposter vs genuine user, with decision threshold t).</em><br><br>
+      What is the label for <strong>area A</strong> (grey shaded area — under the genuine-user curve, <em>left</em> of threshold t)?`,
+    options:[
+      {l:"A",t:"False positives"},
+      {l:"B",t:"True positives"},
+      {l:"C",t:"False negatives"},
+      {l:"D",t:"True negatives"}
+    ],
+    answer:"C",
+    explanation:"Area A (grey) sits under the <em>genuine user</em> curve to the LEFT of the threshold — these users scored below t so the system rejected them. They are real users wrongly rejected = <strong>False Negatives</strong>. ✔ Confirmed by image answer key."
+  },
+
+  // Image3-Q2: Answer A = False positives  (original said A=False negatives — IMAGE CONFIRMS A, and option A = False positives)
+  { id:"D2", type:"mcq",
+    question:`<em>Refer to the Intrusion Detection diagram.</em><br><br>
+      What is the label for <strong>area B</strong> (blue shaded area — under the imposter curve, <em>right</em> of threshold t)?`,
+    options:[
+      {l:"A",t:"False positives"},
+      {l:"B",t:"True positives"},
+      {l:"C",t:"False negatives"},
+      {l:"D",t:"True negatives"}
+    ],
+    answer:"A",
+    explanation:"Area B (blue) sits under the <em>imposter</em> curve to the RIGHT of the threshold — these imposters scored above t so the system <em>accepted</em> them. Imposters wrongly accepted = <strong>False Positives</strong>. ✔ Confirmed by image answer key."
+  },
+
+  // Image4-Q3: Answer D  (original said A — IMAGE CORRECTS TO D)
+  { id:"D3", type:"mcq",
+    question:`<em>Refer to the Intrusion Detection diagram.</em><br><br>
+      What kind of organisation would pick threshold <strong>t at point C</strong> and what would be the impact?`,
+    options:[
+      {l:"A",t:"a customer service company that does not want to upset its customers by rejecting many legitimate users"},
+      {l:"B",t:"a customer service company that wants to admit all its legitimate users"},
+      {l:"C",t:"a max security organisation that does not want to upset its employees by rejecting many legitimate users"},
+      {l:"D",t:"a max security organisation that does not tolerate any intrusions"}
+    ],
+    answer:"D",
+    explanation:"Point C is a strict (low-score) threshold — almost everything triggers rejection. Zero imposters get through, but many genuine users are also blocked (high false-negative rate). Only a <strong>max-security org</strong> accepts this trade-off. ✔ Confirmed by image answer key."
+  },
+
+  // Image4-Q4: Answer A  (matches original Q12)
+  { id:"D4", type:"mcq",
+    question:`<em>Refer to the Intrusion Detection diagram.</em><br><br>
+      What kind of organisation would pick threshold <strong>t at point D</strong> and what would be the impact?`,
+    options:[
+      {l:"A",t:"a customer service company that does not want to upset its customers by rejecting many legitimate users"},
+      {l:"B",t:"a customer service company that does not tolerate any intrusions"},
+      {l:"C",t:"a max security organisation that wants to minimise false negatives"},
+      {l:"D",t:"a max security organisation that does not tolerate any intrusions"}
+    ],
+    answer:"A",
+    explanation:"Point D is a lenient (high-score) threshold — only very suspicious users are rejected. Most legitimate users pass through (low false-negative rate), but more imposters slip in. Ideal for <strong>customer-facing services</strong> prioritising user experience."
+  },
+
+  // ── SET 3: IDS / Alarm Precision ────────────────────────────────────
+
+  { id:"I1", type:"written",
+    question:`Given the relation:<span class="eq">AP = TP/(TP+FP) ≈ TP/FP ≈ nI/(FPR·nN) ≈ (nI/nN)/FPR</span>
+      <strong>(a)</strong> What is a desirable property for AP?<br><br>
+      <strong>(b)</strong> What two factors affect AP?<br><br>
+      <strong>(c)</strong> Which is within the designers' control and which is external?`,
+    answerLines:[
+      "<strong>(a)</strong> AP should be <strong>high</strong> (close to 1) — most alarms should be real intrusions.",
+      "<strong>(b)</strong> <strong>FPR</strong> (False Positive Rate) and <strong>nI/nN</strong> (ratio of intrusion to normal events).",
+      "<strong>(c)</strong> <strong>FPR</strong> = designer's control (tune detection threshold). <strong>nI/nN</strong> = external (real-world attack frequency)."
+    ],
+    explanation:"High AP means few wasted alarms. Designers control FPR by adjusting sensitivity; the intrusion rate is an environmental constant outside their control."
+  },
+
+  { id:"I2", type:"mcq",
+    question:"Considering <strong>N1</strong> as the normal profile, what would a <strong>max-security organisation</strong> that cannot tolerate any intrusions do to the anomaly-based definitions — and what is the negative consequence?",
+    options:[
+      {l:"A",t:"Retrain until N1 is zero — this will result in increased false positives"},
+      {l:"B",t:"Increase R's size — this will result in reduced false positives"},
+      {l:"C",t:"Retrain until N1 does not intersect with R — this will result in increased false positives"},
+      {l:"D",t:"Retrain to increase N1 size — this will result in reduced false negatives"}
+    ],
+    answer:"C",
+    explanation:"They push R away from N1 until there is zero overlap — guaranteeing no missed intrusions. The cost is a large rise in false positives: legitimate activity gets flagged."
+  },
+
+  // ── SET 4: Evasion Diagram ───────────────────────────────────────────
+
+  // Shared diagram HTML embedded in each card question
+  // (a) static decryptor + fixed encrypted body + local key
+  // (b) evolving decryptor + fixed encrypted body + local key
+  // (c) decryptor + fixed encrypted body + external key
+  // (d) entire virus evolves per instance, not encrypted
+
+  { id:"E1", type:"mcq",
+    question:`The following diagram shows four malware evasion strategies.<br><br>
+<svg viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:12px auto 16px;font-family:'DM Sans',sans-serif;">
+  <!-- (a) -->
+  <rect x="10" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="55" y="50" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="55" y="62" text-anchor="middle" fill="#9090b8" font-size="8">(static)</text>
+  <rect x="10" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="55" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="55" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="30" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <line x1="100" y1="55" x2="110" y2="55" stroke="#7c6aff" stroke-width="1" marker-end="url(#arr)"/>
+  <line x1="100" y1="115" x2="110" y2="115" stroke="#ff9955" stroke-width="1"/>
+  <text x="55" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(a)</text>
+
+  <!-- (b) -->
+  <rect x="130" y="30" width="95" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="177" y="48" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="177" y="60" text-anchor="middle" fill="#9090b8" font-size="8">(evolves each</text>
+  <text x="177" y="70" text-anchor="middle" fill="#9090b8" font-size="8">instance)</text>
+  <rect x="130" y="85" width="95" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="177" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="177" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="148" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="177" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(b)</text>
+
+  <!-- (c) -->
+  <rect x="255" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="300" y="52" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <rect x="255" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="300" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="300" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="338" y="50" fill="#6affd4" font-size="11">🔑</text>
+  <text x="330" y="65" text-anchor="middle" fill="#6affd4" font-size="8">external</text>
+  <text x="330" y="75" text-anchor="middle" fill="#6affd4" font-size="8">key</text>
+  <text x="300" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(c)</text>
+
+  <!-- (d) -->
+  <rect x="375" y="30" width="130" height="115" rx="4" fill="#1e2a1e" stroke="#22c97a" stroke-width="1.5"/>
+  <text x="440" y="58" text-anchor="middle" fill="#a0f0c0" font-size="9">entire virus</text>
+  <text x="440" y="72" text-anchor="middle" fill="#a0f0c0" font-size="9">evolves per</text>
+  <text x="440" y="86" text-anchor="middle" fill="#a0f0c0" font-size="9">instance</text>
+  <text x="440" y="104" text-anchor="middle" fill="#6aaa88" font-size="8">(not encrypted)</text>
+  <text x="440" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(d)</text>
+</svg>
+      What strategy is <strong>(a)</strong>?`,
+    options:[
+      {l:"A",t:"Polymorphic — decryptor evolves each instance, body stays fixed and encrypted"},
+      {l:"B",t:"Encrypted virus — static decryptor, fixed encrypted body, single local key"},
+      {l:"C",t:"Metamorphic — entire virus rewrites itself, no encryption needed"},
+      {l:"D",t:"Oligomorphic — external key used to decrypt a fixed body"}
+    ],
+    answer:"B",
+    explanation:"Strategy <strong>(a)</strong> is a basic <strong>encrypted virus</strong>: a fixed, unchanging decryptor stub + a fixed encrypted body + one local key. The decryptor never changes, so AV can easily create a static signature for it."
+  },
+
+  { id:"E2", type:"mcq",
+    question:`The following diagram shows four malware evasion strategies.<br><br>
+<svg viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:12px auto 16px;font-family:'DM Sans',sans-serif;">
+  <rect x="10" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="55" y="50" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="55" y="62" text-anchor="middle" fill="#9090b8" font-size="8">(static)</text>
+  <rect x="10" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="55" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="55" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="30" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="55" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(a)</text>
+  <rect x="130" y="30" width="95" height="50" rx="4" fill="#2a1e3a" stroke="#ff6aff" stroke-width="2"/>
+  <text x="177" y="48" text-anchor="middle" fill="#f0c0ff" font-size="9">decryptor</text>
+  <text x="177" y="60" text-anchor="middle" fill="#c090d0" font-size="8">(evolves each</text>
+  <text x="177" y="70" text-anchor="middle" fill="#c090d0" font-size="8">instance)</text>
+  <rect x="130" y="85" width="95" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="177" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="177" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="148" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="177" y="175" text-anchor="middle" fill="#ff6aff" font-size="11" font-weight="bold">(b)</text>
+  <rect x="255" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="300" y="52" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <rect x="255" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="300" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="300" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="338" y="50" fill="#6affd4" font-size="11">🔑</text>
+  <text x="330" y="65" text-anchor="middle" fill="#6affd4" font-size="8">external</text>
+  <text x="330" y="75" text-anchor="middle" fill="#6affd4" font-size="8">key</text>
+  <text x="300" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(c)</text>
+  <rect x="375" y="30" width="130" height="115" rx="4" fill="#1e2a1e" stroke="#22c97a" stroke-width="1.5"/>
+  <text x="440" y="58" text-anchor="middle" fill="#a0f0c0" font-size="9">entire virus</text>
+  <text x="440" y="72" text-anchor="middle" fill="#a0f0c0" font-size="9">evolves per</text>
+  <text x="440" y="86" text-anchor="middle" fill="#a0f0c0" font-size="9">instance</text>
+  <text x="440" y="104" text-anchor="middle" fill="#6aaa88" font-size="8">(not encrypted)</text>
+  <text x="440" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(d)</text>
+</svg>
+      What strategy is <strong>(b)</strong>?`,
+    options:[
+      {l:"A",t:"Encrypted virus — static decryptor, body never changes"},
+      {l:"B",t:"Metamorphic — no encryption, whole virus rewrites itself"},
+      {l:"C",t:"Polymorphic — decryptor mutates each instance, body stays fixed and encrypted"},
+      {l:"D",t:"Oligomorphic — external key provided per infection"}
+    ],
+    answer:"C",
+    explanation:"Strategy <strong>(b)</strong> is <strong>polymorphic</strong>: the decryptor changes (evolves) with every new infection while the encrypted body stays functionally identical. This defeats static AV signatures targeting the decryptor stub."
+  },
+
+  { id:"E3", type:"mcq",
+    question:`The following diagram shows four malware evasion strategies.<br><br>
+<svg viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:12px auto 16px;">
+  <rect x="10" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="55" y="50" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="55" y="62" text-anchor="middle" fill="#9090b8" font-size="8">(static)</text>
+  <rect x="10" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="55" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="55" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="30" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="55" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(a)</text>
+  <rect x="130" y="30" width="95" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="177" y="48" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="177" y="60" text-anchor="middle" fill="#9090b8" font-size="8">(evolves each</text>
+  <text x="177" y="70" text-anchor="middle" fill="#9090b8" font-size="8">instance)</text>
+  <rect x="130" y="85" width="95" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="177" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="177" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="148" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="177" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(b)</text>
+  <rect x="255" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#ff6aff" stroke-width="2"/>
+  <text x="300" y="52" text-anchor="middle" fill="#f0c0ff" font-size="9">decryptor</text>
+  <rect x="255" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="300" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="300" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="338" y="50" fill="#6affd4" font-size="11">🔑</text>
+  <text x="330" y="65" text-anchor="middle" fill="#6affd4" font-size="8">external</text>
+  <text x="330" y="75" text-anchor="middle" fill="#6affd4" font-size="8">key</text>
+  <text x="300" y="175" text-anchor="middle" fill="#ff6aff" font-size="11" font-weight="bold">(c)</text>
+  <rect x="375" y="30" width="130" height="115" rx="4" fill="#1e2a1e" stroke="#22c97a" stroke-width="1.5"/>
+  <text x="440" y="58" text-anchor="middle" fill="#a0f0c0" font-size="9">entire virus</text>
+  <text x="440" y="72" text-anchor="middle" fill="#a0f0c0" font-size="9">evolves per</text>
+  <text x="440" y="86" text-anchor="middle" fill="#a0f0c0" font-size="9">instance</text>
+  <text x="440" y="104" text-anchor="middle" fill="#6aaa88" font-size="8">(not encrypted)</text>
+  <text x="440" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(d)</text>
+</svg>
+      What strategy is <strong>(c)</strong>?`,
+    options:[
+      {l:"A",t:"Polymorphic — decryptor mutates, body fixed, local key"},
+      {l:"B",t:"Metamorphic — no encryption, entire virus evolves"},
+      {l:"C",t:"Encrypted virus — static decryptor, fixed encrypted body"},
+      {l:"D",t:"Encrypted virus with external key — decryptor is fixed, body encrypted, key comes from outside"}
+    ],
+    answer:"D",
+    explanation:"Strategy <strong>(c)</strong> uses a fixed decryptor and fixed encrypted body, but the decryption key is <strong>external</strong> — fetched from a remote server rather than embedded in the virus. This prevents recovery even if the sample is captured without the key."
+  },
+
+  { id:"E4", type:"mcq",
+    question:`The following diagram shows four malware evasion strategies.<br><br>
+<svg viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:12px auto 16px;">
+  <rect x="10" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="55" y="50" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="55" y="62" text-anchor="middle" fill="#9090b8" font-size="8">(static)</text>
+  <rect x="10" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="55" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="55" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="30" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="55" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(a)</text>
+  <rect x="130" y="30" width="95" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="177" y="48" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <text x="177" y="60" text-anchor="middle" fill="#9090b8" font-size="8">(evolves each</text>
+  <text x="177" y="70" text-anchor="middle" fill="#9090b8" font-size="8">instance)</text>
+  <rect x="130" y="85" width="95" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="177" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="177" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="148" y="138" fill="#ffaa44" font-size="16">🔑</text>
+  <text x="177" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(b)</text>
+  <rect x="255" y="30" width="90" height="50" rx="4" fill="#2a1e3a" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="300" y="52" text-anchor="middle" fill="#c8c0f0" font-size="9">decryptor</text>
+  <rect x="255" y="85" width="90" height="60" rx="4" fill="#3a2a1a" stroke="#ff9955" stroke-width="1.5"/>
+  <text x="300" y="108" text-anchor="middle" fill="#f0c090" font-size="9">fixed body</text>
+  <text x="300" y="120" text-anchor="middle" fill="#c09060" font-size="8">(encrypted)</text>
+  <text x="338" y="50" fill="#6affd4" font-size="11">🔑</text>
+  <text x="330" y="65" text-anchor="middle" fill="#6affd4" font-size="8">external</text>
+  <text x="330" y="75" text-anchor="middle" fill="#6affd4" font-size="8">key</text>
+  <text x="300" y="175" text-anchor="middle" fill="#6b6b80" font-size="10">(c)</text>
+  <rect x="375" y="30" width="130" height="115" rx="4" fill="#1e2a1e" stroke="#ff6aff" stroke-width="2"/>
+  <text x="440" y="58" text-anchor="middle" fill="#f0c0ff" font-size="9">entire virus</text>
+  <text x="440" y="72" text-anchor="middle" fill="#f0c0ff" font-size="9">evolves per</text>
+  <text x="440" y="86" text-anchor="middle" fill="#f0c0ff" font-size="9">instance</text>
+  <text x="440" y="104" text-anchor="middle" fill="#c090d0" font-size="8">(not encrypted)</text>
+  <text x="440" y="175" text-anchor="middle" fill="#ff6aff" font-size="11" font-weight="bold">(d)</text>
+</svg>
+      What strategy is <strong>(d)</strong>?`,
+    options:[
+      {l:"A",t:"Polymorphic — only the decryptor changes, body stays encrypted"},
+      {l:"B",t:"Encrypted virus — fixed decryptor and fixed encrypted body"},
+      {l:"C",t:"Metamorphic — the entire virus rewrites itself each instance, no encryption"},
+      {l:"D",t:"Oligomorphic — selects from a small pool of fixed variants"}
+    ],
+    answer:"C",
+    explanation:"Strategy <strong>(d)</strong> is <strong>metamorphic</strong>: the entire virus — payload, infection code, and mutation engine — rewrites itself completely with every replication. There is no encrypted body and no decryptor; the code itself is the moving target."
+  },
+
+  // ── SET 4b: Virus / Malware ───────────────────────────────────────────
+
+  { id:"V1", type:"mcq",
+    question:"What is the <strong>advantage of the attacker</strong> in case (b) — an encrypted virus with a mutating decryptor — compared to case (a)?",
+    options:[
+      {l:"A",t:"Faster deployment and propagation"},
+      {l:"B",t:"Having a strong key"},
+      {l:"C",t:"The body is encrypted"},
+      {l:"D",t:"Creating a signature for the decryptor is challenging"}
+    ],
+    answer:"D",
+    explanation:"In case (a) the decryptor stub is fixed and trivially fingerprinted. In case (b) it mutates each generation, making it very hard for AV to write a reliable signature."
+  },
+
+  { id:"V2", type:"multi",
+    question:"In case (b), how would the <strong>decryptor evolve</strong>? <em>(Select TWO correct answers)</em>",
+    options:[
+      {l:"A",t:"Executing a remote exploit on a network service to obtain a root shell or install a rootkit"},
+      {l:"B",t:"Get the encryption from a nearby vulnerable server by sending a hidden authenticated message"},
+      {l:"C",t:"Select a decryptor for the new infection from a fixed pool of decryptors in the body"},
+      {l:"D",t:"The virus rewrites its own code, mutating both its body and the mutation engine itself"},
+      {l:"E",t:"Using a mini-compiler that creates a new one"}
+    ],
+    answer:["C","D"],
+    explanation:"<strong>C</strong> = oligomorphic: pick from a pre-stored pool each infection. <strong>D</strong> = metamorphic: fully rewrite both the body and the mutation engine every cycle."
+  },
+
+  { id:"V3", type:"mcq",
+    question:"What is the name of the second strategy <strong>(b)</strong> — where the virus uses a mutating decryptor?",
+    options:[
+      {l:"A",t:"Rootkit"},
+      {l:"B",t:"Polymorphic"},
+      {l:"C",t:"Autorooter"},
+      {l:"D",t:"Fixed encryption"},
+      {l:"E",t:"Stealthy"},
+      {l:"F",t:"Metamorphic"}
+    ],
+    answer:"B",
+    explanation:"A <strong>polymorphic</strong> virus keeps an encrypted body but regenerates its decryptor on each replication, defeating static signature-based AV."
+  },
+
+  { id:"V4", type:"mcq",
+    question:"How would a <strong>polymorphic virus</strong> be detected?",
+    options:[
+      {l:"A",t:"It cannot be detected because of the strong encryption"},
+      {l:"B",t:"Capturing the key on-the-fly"},
+      {l:"C",t:"Detecting the damage the virus does but the actual code cannot be detected"},
+      {l:"D",t:"Pre-run executables in emulators to detect the unencrypted body"}
+    ],
+    answer:"D",
+    explanation:"Emulation forces the decryptor to execute and expose the decrypted payload in memory. AV scans that plaintext body — bypassing the encryption entirely."
+  },
+
+  { id:"V5", type:"mcq",
+    question:"Which of the listed program viruses will make <strong>cleaning and recovery difficult or impossible</strong>?",
+    options:[
+      {l:"A",t:"All of them"},
+      {l:"B",t:"a, b, c"},
+      {l:"C",t:"c, d"},
+      {l:"D",t:"Only d"}
+    ],
+    answer:"C",
+    explanation:"Viruses c and d overwrite or deeply corrupt the host file, making the original code unrecoverable. Types a and b prepend/append without destroying the original, so disinfection is still possible."
+  },
+
+  { id:"V6", type:"mcq",
+    question:`What malware matches this structure?<br><br>
+      <code style="display:block;font-family:'DM Mono',monospace;background:rgba(124,106,255,0.12);
+        border-left:3px solid var(--accent);padding:11px 15px;border-radius:8px;margin-top:10px;
+        color:var(--accent3);font-size:0.87rem;line-height:1.7">if trigger_condition.true() then run_payload()</code>`,
+    options:[
+      {l:"A",t:"Trojan horse"},
+      {l:"B",t:"Auto-rooter"},
+      {l:"C",t:"Logic bomb"},
+      {l:"D",t:"Rootkit"}
+    ],
+    answer:"C",
+    explanation:"A <strong>logic bomb</strong> lies dormant until a specific trigger condition is met (a date, event, deleted file, etc.) then executes its payload. The conditional activation is its defining characteristic."
+  },
+
+  { id:"V7", type:"mcq",
+    question:"What is an <strong>advantage of local scanning</strong> for worm propagation?",
+    options:[
+      {l:"A",t:"It requires less coding"},
+      {l:"B",t:"It results in faster code execution"},
+      {l:"C",t:"It is risky for the worm to cross network boundaries"},
+      {l:"D",t:"It gives access to local email addresses"}
+    ],
+    answer:"D",
+    explanation:"Scanning locally exposes address books and local email data. The worm can then spread to known contacts — exploiting trust relationships for social-engineering propagation."
+  },
+
+  // ── SET 5: Ransomware ────────────────────────────────────────────────
+
+  { id:"R1", type:"mcq",
+    question:"In the ransomware diagram, what is <strong>k</strong>?",
+    options:[
+      {l:"A",t:"Random key used for AES encryption only"},
+      {l:"B",t:"Key used for symmetric encryption and also treated as data when it is encrypted"},
+      {l:"C",t:"Data input to RSA that is also a key to public key encryption"},
+      {l:"D",t:"Data input to the RSA only"},
+      {l:"E",t:"Random key used for asymmetric encryption and also treated as data when it is encrypted"}
+    ],
+    answer:"B",
+    explanation:"k is a symmetric (AES) session key that encrypts the victim's files. It is then RSA-encrypted and sent to the attacker — so k is simultaneously a <em>key</em> (for AES) and <em>data</em> (input to RSA)."
+  },
+
+  { id:"R2", type:"mcq",
+    question:"How many <strong>k keys</strong> are used per victim in the ransomware diagram?",
+    options:[
+      {l:"A",t:"2"},
+      {l:"B",t:"2000"},
+      {l:"C",t:"n (one unique key per file)"},
+      {l:"D",t:"m"},
+      {l:"E",t:"i"},
+      {l:"F",t:"1"}
+    ],
+    answer:"C",
+    explanation:"A fresh k is generated for each of the n victim files. Recovering one key only decrypts one file — maximising pressure on the victim to pay for all n keys."
+  },
+
+  // ── SET 6: Rootkits & Hooking ────────────────────────────────────────
+
+  { id:"K1", type:"mcq",
+    question:"What is a good defence against the <strong>syscall table hooking</strong> technique?",
+    options:[
+      {l:"A",t:"Memory scans of the kernel space"},
+      {l:"B",t:"Anti-hooking software"},
+      {l:"C",t:"Cross-check of table addresses"},
+      {l:"D",t:"Memory scans of the user space"}
+    ],
+    answer:"C",
+    explanation:"The syscall table holds function pointers. Comparing those pointers against the expected addresses of legitimate kernel functions reveals any entry replaced by a rootkit hook."
+  },
+
+  { id:"K2", type:"written",
+    question:`Consider a <strong>different interception technique</strong> (not syscall table hooking).<br><br>
+      <strong>(1)</strong> Why wouldn't the defence against typical hooking work?<br><br>
+      <strong>(2)</strong> What defence would work?`,
+    answerLines:[
+      "<strong>(1)</strong> This technique does <em>not modify the syscall table</em> — so cross-checking table addresses finds nothing. The interception happens elsewhere (e.g. inline kernel patching or DKOM).",
+      "<strong>(2)</strong> <strong>Control Flow Integrity (CFI) checking</strong> — verify that execution follows only pre-approved legitimate code paths, catching deviations from in-memory patches."
+    ],
+    explanation:"Advanced rootkits deliberately avoid the syscall table because it is monitored. CFI and kernel code-integrity mechanisms operate at a deeper level and catch these stealthier methods."
+  },
+
+  // ── SET 7: Misc ──────────────────────────────────────────────────────
+
+  { id:"M1", type:"mcq",
+    question:"In the ransomware diagram, what is the <strong>hooking technique defence</strong> shown — specifically, what makes the <em>different</em> technique (Q K2) harder to detect?",
+    options:[
+      {l:"A",t:"It uses stronger encryption"},
+      {l:"B",t:"It modifies the syscall table at a different offset"},
+      {l:"C",t:"It does not modify the syscall table at all"},
+      {l:"D",t:"It operates entirely in user space"}
+    ],
+    answer:"C",
+    explanation:"The alternate technique bypasses the syscall table entirely (e.g. via DKOM or inline patching), so the standard cross-check of table addresses produces a false negative — everything looks clean."
+  }
+
+];
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════
+let mode = 'study';
+let order = cards.map((_,i)=>i);
+let current = 0;
+let isFlipped = false;
+let answered = {};
+let multiPending = [];
+let quizDone = false;
+
+const TOTAL = cards.length;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BUILD HTML
+// ═══════════════════════════════════════════════════════════════════════
+function buildFront(card) {
+  const done = answered[current] !== undefined;
+  let optHTML = '';
+
+  if (card.type === 'mcq') {
+    optHTML = '<div class="options">' +
+      card.options.map(o => {
+        let cls = 'option';
+        if (done) {
+          if (o.l === card.answer) cls += ' reveal-correct';
+          if (o.l === answered[current] && answered[current] !== card.answer) cls += ' selected-wrong';
+        }
+        return `<button class="${cls}" onclick="selectOption(event,'${o.l}')">
+          <span class="option-letter">${o.l}</span><span>${o.t}</span></button>`;
+      }).join('') + '</div>';
+  } else if (card.type === 'multi') {
+    optHTML = '<div class="options">' +
+      card.options.map(o => {
+        let cls = 'option';
+        if (done) {
+          if (card.answer.includes(o.l)) cls += ' reveal-correct';
+        } else if (multiPending.includes(o.l)) {
+          cls += ' multi-pending';
+        }
+        return `<button class="${cls}" onclick="selectMulti(event,'${o.l}')">
+          <span class="option-letter">${o.l}</span><span>${o.t}</span></button>`;
+      }).join('') + '</div>';
+  }
+
+  const typeLabel = card.type==='written'?'SHORT ANSWER':card.type==='multi'?'MULTI-SELECT · PICK 2':'MULTIPLE CHOICE';
+  const hint = card.type==='written'?'click card to reveal answer':'click card or FLIP for explanation';
+  return `<div class="card-tag">Q${card.id} · ${typeLabel}</div>
+    <div class="card-question">${card.question}</div>
+    ${optHTML}
+    <div class="hint-flip">↕ ${hint}</div>`;
+}
+
+function buildBack(card) {
+  let ansHTML = '';
+  if (card.type === 'mcq') {
+    const opt = card.options.find(o=>o.l===card.answer);
+    ansHTML = `<div class="answer-main-big">${card.answer} — ${opt?opt.t:''}</div>`;
+  } else if (card.type === 'multi') {
+    ansHTML = card.answer.map(l=>{
+      const opt = card.options.find(o=>o.l===l);
+      return `<div class="answer-line"><strong>${l}</strong> — ${opt?opt.t:l}</div>`;
+    }).join('');
+  } else {
+    ansHTML = card.answerLines.map(l=>`<div class="answer-line">${l}</div>`).join('');
+  }
+  return `<div class="answer-label">✓ ANSWER</div>
+    ${ansHTML}
+    <div class="answer-explanation"><span class="bullet">→</span><span>${card.explanation}</span></div>`;
+}
+
+function renderCard() {
+  const card = cards[order[current]];
+  const front = document.getElementById('cardFront');
+  const back  = document.getElementById('cardBack');
+  const sizer = document.getElementById('cardSizer');
+
+  document.getElementById('flashcard').classList.remove('flipped');
+  isFlipped = false;
+  document.getElementById('btnFlip').textContent = 'FLIP';
+
+  const fH = buildFront(card);
+  const bH = buildBack(card);
+  front.innerHTML = fH;
+  back.innerHTML  = bH;
+  sizer.innerHTML = fH;
+
+  requestAnimationFrame(()=>{
+    const h = Math.max(front.scrollHeight, back.scrollHeight, 260);
+    sizer.style.minHeight = h + 'px';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  INTERACTION
+// ═══════════════════════════════════════════════════════════════════════
+function handleCardClick(e) {
+  if (e.target.closest('.option')) return;
+  flipCard();
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
+  document.getElementById('btnFlip').textContent = isFlipped ? 'UNFLIP' : 'FLIP';
+  const card = cards[order[current]];
+  if (card.type==='written' && isFlipped && answered[current]===undefined) {
+    answered[current] = 'seen';
+    updateUI();
+  }
+}
+
+function selectOption(e, letter) {
+  e.stopPropagation();
+  if (answered[current] !== undefined) return;
+  answered[current] = letter;
+  renderCard();
+  updateUI();
+  if (mode==='quiz') setTimeout(()=>{ if(!isFlipped) flipCard(); }, 500);
+}
+
+function selectMulti(e, letter) {
+  e.stopPropagation();
+  if (answered[current] !== undefined) return;
+  if (multiPending.includes(letter)) {
+    multiPending = multiPending.filter(l=>l!==letter);
+  } else if (multiPending.length < 2) {
+    multiPending.push(letter);
+  }
+  if (multiPending.length === 2) {
+    const card = cards[order[current]];
+    const correct = card.answer.length===2 &&
+      card.answer.every(a=>multiPending.includes(a)) &&
+      multiPending.every(a=>card.answer.includes(a));
+    answered[current] = correct;
+    multiPending = [];
+    renderCard();
+    updateUI();
+    if (mode==='quiz') setTimeout(()=>{ if(!isFlipped) flipCard(); }, 500);
+  } else {
+    renderCard();
+    if (isFlipped) document.getElementById('flashcard').classList.add('flipped');
+  }
+}
+
+function navigate(dir) {
+  const next = current + dir;
+  if (next<0 || next>=TOTAL) return;
+  current = next;
+  multiPending = [];
+  renderCard();
+  updateUI();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  UI / SCORE
+// ═══════════════════════════════════════════════════════════════════════
+function updateUI() {
+  const done = Object.keys(answered).length;
+  let cCount=0, wCount=0;
+  for (const [idx,ans] of Object.entries(answered)) {
+    const card = cards[order[idx]];
+    if (card.type==='written') continue;
+    if (card.type==='multi') { if(ans===true) cCount++; else if(ans===false) wCount++; }
+    else { if(ans===card.answer) cCount++; else wCount++; }
+  }
+  document.getElementById('progressFill').style.width = `${(done/TOTAL)*100}%`;
+  document.getElementById('progressLabel').textContent = `${done} / ${TOTAL} answered`;
+  document.getElementById('scoreCorrect').textContent  = `${cCount} correct`;
+  document.getElementById('scoreWrong').textContent    = `${wCount} wrong`;
+  document.getElementById('scoreLeft').textContent     = `${TOTAL-done} left`;
+  document.getElementById('btnPrev').disabled = current===0;
+  document.getElementById('btnNext').disabled = current===TOTAL-1;
+  if (mode==='quiz' && done===TOTAL && !quizDone) { quizDone=true; setTimeout(showResult,900); }
+}
+
+function showResult() {
+  let cCount=0,wCount=0;
+  for (const [idx,ans] of Object.entries(answered)) {
+    const card=cards[order[idx]];
+    if(card.type==='written') continue;
+    if(card.type==='multi'){if(ans===true)cCount++;else wCount++;}
+    else{if(ans===card.answer)cCount++;else wCount++;}
+  }
+  const scorable = cards.filter(c=>c.type!=='written').length;
+  const pct = Math.round((cCount/scorable)*100);
+  document.getElementById('resultPct').textContent  = `${pct}%`;
+  document.getElementById('resCorrect').textContent = cCount;
+  document.getElementById('resWrong').textContent   = wCount;
+  document.getElementById('cardWrapper').style.display = 'none';
+  document.getElementById('controls').style.display   = 'none';
+  document.getElementById('resultScreen').classList.add('show');
+}
+
+function restart() {
+  answered={}; current=0; isFlipped=false; quizDone=false; multiPending=[];
+  if(mode==='shuffle') order=[...Array(TOTAL).keys()].sort(()=>Math.random()-0.5);
+  document.getElementById('resultScreen').classList.remove('show');
+  document.getElementById('cardWrapper').style.display='';
+  document.getElementById('controls').style.display='';
+  renderCard(); updateUI();
+}
+
+function setMode(m, e) {
+  mode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  order = m==='shuffle'
+    ? [...Array(TOTAL).keys()].sort(()=>Math.random()-0.5)
+    : cards.map((_,i)=>i);
+  answered={}; current=0; isFlipped=false; quizDone=false; multiPending=[];
+  document.getElementById('resultScreen').classList.remove('show');
+  document.getElementById('cardWrapper').style.display='';
+  document.getElementById('controls').style.display='';
+  renderCard(); updateUI();
+}
+
+renderCard();
+updateUI();
+</script>
+</body>
+</html>
